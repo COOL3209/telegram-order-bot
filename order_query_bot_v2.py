@@ -1,7 +1,7 @@
+import os
+import pyodbc
 from telegram import Update, Bot
 from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
-import pyodbc
-import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
@@ -18,19 +18,23 @@ conn_str = (
 def handle_order_query(update: Update, context: CallbackContext):
     order_no = update.message.text.strip()
     try:
-        conn = pyodbc.connect(conn_str)
+        conn = pyodbc.connect(conn_str, timeout=5)
         cursor = conn.cursor()
-        sql = "SELECT AssignDriver, Last_Location, STATE FROM Transport WHERE ODNO = ?"
-        cursor.execute(sql, order_no)
-        result = cursor.fetchone()
-        if result:
-            driver, location, status = result
+        cursor.execute("SELECT AssignDriver, Last_Location, STATE FROM Transport WHERE ODNO = ?", order_no)
+        row = cursor.fetchone()
+        if row:
+            driver, location, state = row
             reply = (
-                f"📦 訂單號碼：{order_no}\n"
-                f"🚛 司機：{driver}\n"
-                f"📍 目前位置：{location}\n"
-                f"📈 狀態：{status}\n"
-                f"🧡 南亞成品處 榮幸為您服務"
+                f"📦 訂單號碼：{order_no}
+"
+                f"🚛 司機：{driver}
+"
+                f"📍 目前位置：{location}
+"
+                f"📈 狀態：{state}
+
+"
+                f"南亞成品處 榮幸為您服務"
             )
         else:
             reply = f"❌ 查無訂單號碼：{order_no}"
@@ -41,9 +45,17 @@ def handle_order_query(update: Update, context: CallbackContext):
     update.message.reply_text(reply)
 
 def main():
-    updater = Updater(BOT_TOKEN, use_context=True)
+    bot = Bot(token=BOT_TOKEN)
+    updater = Updater(bot=bot, use_context=True)
     dp = updater.dispatcher
+
+    # 初始歡迎訊息
+    def welcome(update: Update, context: CallbackContext):
+        update.message.reply_text("Hi~歡迎你~有訂單想要查詢嗎?")
+
+    dp.add_handler(MessageHandler(Filters.command, welcome))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_order_query))
+
     print("🤖 Bot 已啟動")
     updater.start_polling()
     updater.idle()
