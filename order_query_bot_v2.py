@@ -21,20 +21,15 @@ def handle_order_query(update: Update, context: CallbackContext):
         conn = pyodbc.connect(conn_str, timeout=5)
         cursor = conn.cursor()
         cursor.execute("SELECT AssignDriver, Last_Location, STATE FROM Transport WHERE ODNO = ?", order_no)
-        row = cursor.fetchone()
-        if row:
-            driver, location, state = row
+        result = cursor.fetchone()
+        if result:
+            driver, location, status = result
             reply = (
-                f"📦 訂單號碼：{order_no}
-"
-                f"🚛 司機：{driver}
-"
-                f"📍 目前位置：{location}
-"
-                f"📈 狀態：{state}
-
-"
-                f"南亞成品處 榮幸為您服務"
+                f"📦 訂單號碼：{order_no}\n"
+                f"🚛 司機：{driver}\n"
+                f"📍 目前位置：{location}\n"
+                f"📈 狀態：{status}\n"
+                f"💡 南亞成品處 榮幸為您服務"
             )
         else:
             reply = f"❌ 查無訂單號碼：{order_no}"
@@ -44,16 +39,15 @@ def handle_order_query(update: Update, context: CallbackContext):
         reply = f"❗ 發生錯誤：{e}"
     update.message.reply_text(reply)
 
+def welcome_message(update: Update, context: CallbackContext):
+    update.message.reply_text("🙋‍♂️ 南亞成品處訂單小幫手！\n很高興為您服務！\n請輸入訂單號碼來查詢物流資訊～")
+
 def main():
     bot = Bot(token=BOT_TOKEN)
     updater = Updater(bot=bot, use_context=True)
     dp = updater.dispatcher
 
-    # 初始歡迎訊息
-    def welcome(update: Update, context: CallbackContext):
-        update.message.reply_text("Hi~歡迎你~有訂單想要查詢嗎?")
-
-    dp.add_handler(MessageHandler(Filters.command, welcome))
+    dp.add_handler(MessageHandler(Filters.command, welcome_message))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_order_query))
 
     print("🤖 Bot 已啟動")
