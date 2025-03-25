@@ -1,20 +1,17 @@
-# 使用官方 Python 映像檔
 FROM python:3.10-slim
 
-# 安裝 unixODBC 系統函式庫（包含 libodbc.so.2）
-RUN apt-get update && \
-    apt-get install -y unixodbc unixodbc-dev gcc g++ && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    curl gnupg apt-transport-https unixodbc-dev gcc g++ \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 設定工作目錄
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . /app
 WORKDIR /app
 
-# 複製程式碼進容器
-COPY . .
-
-# 安裝 Python 套件
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
-
-# 啟動 Bot
 CMD ["python", "order_query_bot_v2.py"]
